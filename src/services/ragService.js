@@ -80,6 +80,85 @@ export const ragService = {
     },
 
     /**
+     * Ottiene i dettagli completi di un documento
+     * @param {string} documentId - ID del documento
+     * @returns {Promise} - Dettagli del documento
+     */
+    getDocumentDetails: async (documentId) => {
+        try {
+            const response = await apiClient.get(`${API_RAG_URL}/documents/${documentId}/`);
+            return response.data;
+        } catch (error) {
+            throw new Error(error.response?.data?.message || 'Errore nel recupero dei dettagli del documento');
+        }
+    },
+
+    /**
+     * 🧠 Cerca contenuto all'interno di un documento usando AI Ultra-Intelligente
+     * @param {string} documentId - ID del documento
+     * @param {string} query - Query di ricerca in linguaggio naturale
+     * @param {Object} options - Opzioni di ricerca avanzate
+     * @returns {Promise} - Risultati della ricerca con analytics e clustering
+     */
+    searchDocumentContent: async (documentId, query, options = {}) => {
+        try {
+            const searchPayload = {
+                document_id: documentId,
+                query: query,
+                options: {
+                    top_k: options.top_k || 10,
+                    include_context: options.include_context !== false,
+                    similarity_threshold: options.similarity_threshold || 0.7,
+                    enable_clustering: options.enable_clustering !== false,
+                    ...options
+                }
+            };
+
+            const response = await apiClient.post(`${API_RAG_URL}/documents/search_content/`, searchPayload);
+            
+            // 🎯 Log delle informazioni di ricerca per debugging
+            if (response.data.provider_info) {
+                console.log('🔥 Ricerca AI completata:', {
+                    provider: response.data.provider_info.provider,
+                    model: response.data.provider_info.model,
+                    search_type: response.data.search_type,
+                    results_count: response.data.results?.length || 0
+                });
+            }
+
+            return response.data;
+        } catch (error) {
+            throw new Error(error.response?.data?.error || error.response?.data?.message || 'Errore durante la ricerca AI nel documento');
+        }
+    },
+
+    /**
+     * Ottiene l'URL del PDF per la visualizzazione
+     * @param {string} documentId - ID del documento
+     * @returns {string} - URL del PDF
+     */
+    getPdfUrl: (documentId) => {
+        const token = localStorage.getItem('token');
+        return `${API_RAG_URL}/documents/${documentId}/download_pdf/?token=${token}`;
+    },
+
+    /**
+     * Scarica il PDF di un documento
+     * @param {string} documentId - ID del documento
+     * @returns {Promise<Blob>} - Blob del PDF
+     */
+    downloadPdf: async (documentId) => {
+        try {
+            const response = await apiClient.get(`${API_RAG_URL}/documents/${documentId}/download_pdf/`, {
+                responseType: 'blob',
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(error.response?.data?.message || 'Errore durante il download del PDF');
+        }
+    },
+
+    /**
      * Svuota la knowledge base
      * @returns {Promise} - Risposta del server
      */
